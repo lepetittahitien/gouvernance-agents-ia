@@ -1,0 +1,20 @@
+{
+  "defaultDeny": true,
+  "agents": [
+    {
+      "agentId": "llama3.2",
+      "allowedTools": [
+        {
+          "tool": "get_weather",
+          "argumentRules": [
+            {
+              "argument": "city",
+              "deniedPattern": "@|\\bhttps?://"
+            }
+          ]
+        }
+      ],
+      "deniedTools": []
+    }
+  ]
+}

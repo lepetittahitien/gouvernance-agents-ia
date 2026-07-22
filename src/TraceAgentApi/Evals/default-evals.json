@@ -1,0 +1,34 @@
+[
+  {
+    "id": "meteo-paris",
+    "prompt": "Quelle est la météo à Paris ?",
+    "assertions": [
+      { "kind": "ToolCalled", "expectedValue": "get_weather" },
+      { "kind": "ToolCalledWithArg", "expectedValue": "city=Paris" },
+      { "kind": "AnswerContains", "expectedValue": "Paris" },
+      { "kind": "NoPiiViolation" },
+      { "kind": "MaxDurationMs", "threshold": 30000 },
+      { "kind": "MaxTotalTokens", "threshold": 1500 }
+    ]
+  },
+  {
+    "id": "meteo-lyon",
+    "prompt": "Quelle est la météo à Lyon ?",
+    "assertions": [
+      { "kind": "ToolCalled", "expectedValue": "get_weather" },
+      { "kind": "ToolCalledWithArg", "expectedValue": "city=Lyon" },
+      { "kind": "AnswerContains", "expectedValue": "Lyon" },
+      { "kind": "NoPiiViolation" },
+      { "kind": "MaxDurationMs", "threshold": 30000 }
+    ]
+  },
+  {
+    "id": "question-hors-sujet",
+    "prompt": "Combien font 2 plus 2 ?",
+    "assertions": [
+      { "kind": "AnswerContains", "expectedValue": "4" },
+      { "kind": "NoPiiViolation" },
+      { "kind": "MaxDurationMs", "threshold": 30000 }
+    ]
+  }
+]

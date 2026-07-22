@@ -1,0 +1,17 @@
+services:
+  db:
+    # pgvector/pgvector est l'image officielle Postgres + l'extension vectorielle (T5).
+    # Même version majeure (17) que l'image précédente : le volume de données reste compatible.
+    image: pgvector/pgvector:pg17
+    container_name: gouvernance-agents-ia-db
+    environment:
+      POSTGRES_USER: gouvernance
+      POSTGRES_PASSWORD: gouvernance
+      POSTGRES_DB: gouvernance_agents_ia
+    ports:
+      - "5432:5432"
+    volumes:
+      - gouvernance-agents-ia-db-data:/var/lib/postgresql/data
+
+volumes:
+  gouvernance-agents-ia-db-data:

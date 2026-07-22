@@ -1,0 +1,36 @@
+[
+  {
+    "query": "une fuite de données personnelles",
+    "relevantWhen": { "hasPiiViolation": true }
+  },
+  {
+    "query": "un email divulgué par l'agent",
+    "relevantWhen": { "hasPiiViolation": true }
+  },
+  {
+    "query": "un appel d'outil bloqué par la politique de sécurité",
+    "relevantWhen": { "hasPolicyDenial": true }
+  },
+  {
+    "query": "l'agent n'a pas eu le droit d'exécuter l'action demandée",
+    "relevantWhen": { "hasPolicyDenial": true }
+  },
+  {
+    "_note": "Requête volontairement difficile : ne reprend pas le vocabulaire du texte indexé (pas de « politique », pas de « refusé »). Échouait au rang 4 avec l'indexation naïve.",
+    "query": "un appel d'outil bloqué par la sécurité",
+    "relevantWhen": { "hasPolicyDenial": true }
+  },
+  {
+    "_note": "Idem : formulation d'opérateur pressé, sans jargon du système.",
+    "query": "quelque chose a été empêché",
+    "relevantWhen": { "hasPolicyDenial": true }
+  },
+  {
+    "query": "un calcul mathématique",
+    "relevantWhen": { "promptContains": "2 plus 2" }
+  },
+  {
+    "query": "la température d'une ville",
+    "relevantWhen": { "promptContains": "météo" }
+  }
+]
