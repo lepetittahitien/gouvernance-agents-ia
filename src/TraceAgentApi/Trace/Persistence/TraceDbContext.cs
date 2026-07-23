@@ -10,6 +10,7 @@ public class TraceDbContext(DbContextOptions<TraceDbContext> options) : DbContex
     public DbSet<AuditEntryEntity> AuditEntries => Set<AuditEntryEntity>();
     public DbSet<RunEmbeddingEntity> RunEmbeddings => Set<RunEmbeddingEntity>();
     public DbSet<RunChunkEmbeddingEntity> RunChunkEmbeddings => Set<RunChunkEmbeddingEntity>();
+    public DbSet<ExternalScanEntity> ExternalScans => Set<ExternalScanEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,13 @@ public class TraceDbContext(DbContextOptions<TraceDbContext> options) : DbContex
                 .WithOne()
                 .HasForeignKey<RunEmbeddingEntity>(e => e.RunId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExternalScanEntity>(entity =>
+        {
+            entity.ToTable("external_scans");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Timestamp);
         });
 
         modelBuilder.Entity<RunChunkEmbeddingEntity>(entity =>

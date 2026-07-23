@@ -32,6 +32,7 @@ tabButtons.forEach((btn) => {
       loadedTabs.add(btn.dataset.tab);
       if (btn.dataset.tab === "evals") refreshEvals();
       if (btn.dataset.tab === "audit") refreshAudit();
+      if (btn.dataset.tab === "external") refreshExternalScans();
     }
   });
 });
@@ -418,6 +419,74 @@ indexButton.addEventListener("click", async () => {
     setTimeout(() => { indexButton.textContent = "Indexer les runs"; indexButton.disabled = false; }, 2500);
   }
 });
+
+// ===== Onglet Scans externes =====
+
+const externalList = document.getElementById("external-list");
+const refreshExternalButton = document.getElementById("refresh-external-button");
+
+const scanKindLabels = {
+  Pii: "PII",
+  SchemaValidation: "Schéma",
+  InjectionDetection: "Injection",
+};
+
+/// Résumé lisible du verdict, selon le type de scan.
+function describeScanSummary(kind, summary) {
+  if (kind === "Pii") {
+    const types = Object.entries(summary.findingsByType ?? {});
+    return types.length === 0
+      ? "aucune PII détectée"
+      : types.map(([t, n]) => `${t} × ${n}`).join(", ");
+  }
+
+  if (kind === "SchemaValidation") {
+    if (summary.isValid) return "sortie conforme au schéma";
+    if (summary.parseError) return `échec de parsing : ${summary.parseError}`;
+    return `violations sur : ${(summary.violationPaths ?? []).join(", ") || "racine"}`;
+  }
+
+  if (kind === "InjectionDetection") {
+    const signals = Object.entries(summary.signalKinds ?? {});
+    const detail = signals.length ? ` — ${signals.map(([k, n]) => `${k} × ${n}`).join(", ")}` : "";
+    return `risque ${summary.riskLevel} (score ${summary.score})${detail}`;
+  }
+
+  return JSON.stringify(summary);
+}
+
+function renderExternalScans(scans) {
+  if (scans.length === 0) {
+    externalList.innerHTML = '<p class="empty">Aucun scan externe pour l\'instant — appelle /scan, /validate ou /detect-injection depuis un système tiers.</p>';
+    return;
+  }
+
+  externalList.innerHTML = `
+    <table class="data">
+      <thead><tr><th>Date</th><th>Type</th><th>Source</th><th>Verdict</th><th>Résumé</th></tr></thead>
+      <tbody>
+        ${scans.map((s) => `
+          <tr>
+            <td>${formatDate(s.timestamp)}</td>
+            <td><span class="badge kind">${scanKindLabels[s.kind] ?? escapeHtml(s.kind)}</span></td>
+            <td>${s.source ? escapeHtml(s.source) : '<span class="mono">—</span>'}</td>
+            <td><span class="badge ${s.hasViolation ? "fail" : "pass"}">${s.hasViolation ? "violation" : "ok"}</span></td>
+            <td>${escapeHtml(describeScanSummary(s.kind, s.summary))}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function refreshExternalScans() {
+  try {
+    renderExternalScans(await fetchJson("/external-scans"));
+  } catch {
+    externalList.innerHTML = '<p class="empty">Impossible de charger les scans externes.</p>';
+  }
+}
+
+refreshExternalButton.addEventListener("click", refreshExternalScans);
 
 // ===== Démarrage =====
 

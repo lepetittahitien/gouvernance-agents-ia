@@ -265,6 +265,7 @@
   <button data-tab="evals">Évals</button>
   <button data-tab="audit">Audit</button>
   <button data-tab="search">Recherche</button>
+  <button data-tab="external">Scans externes</button>
 </nav>
 
 <section id="tab-runs" class="tab-panel active">
@@ -316,6 +317,16 @@
       <button id="index-button" class="secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">Indexer les runs</button>
     </p>
     <div id="search-results"></div>
+  </div>
+</section>
+
+<section id="tab-external" class="tab-panel">
+  <div class="single">
+    <div class="toolbar">
+      <button id="refresh-external-button" class="secondary">Rafraîchir</button>
+      <span class="hint">Verdicts des endpoints découplés (/scan, /validate, /detect-injection) appelés par des systèmes tiers — le texte scanné n'est jamais conservé, seulement le verdict.</span>
+    </div>
+    <div id="external-list"><p class="empty">Chargement…</p></div>
   </div>
 </section>
 

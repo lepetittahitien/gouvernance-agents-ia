@@ -37,6 +37,7 @@ builder.Services.AddScoped<BudgetMonitor>();
 builder.Services.AddScoped<AuditLogger>();
 builder.Services.AddScoped<ToolPolicyEvaluator>();
 builder.Services.AddScoped<ComplianceExporter>();
+builder.Services.AddScoped<ExternalScanStore>();
 builder.Services.AddScoped<TraceSearchService>();
 builder.Services.AddScoped<ChunkedTraceSearchService>();
 builder.Services.AddScoped<RetrievalEvaluator>();
@@ -78,12 +79,18 @@ app.MapGet("/agent/runs/{runId:guid}", async (Guid runId, TraceQueryService quer
 
 // Garde-fou PII découplé : n'importe quel système tiers (proxy, webhook, script d'ingestion de logs)
 // peut appeler cet endpoint avec du texte brut, sans passer par notre boucle d'orchestration d'agent.
-app.MapPost("/scan", (ScanRequest request) =>
+// Le verdict est persisté (jamais le texte) pour remonter dans le dashboard.
+app.MapPost("/scan", async (ScanRequest request, ExternalScanStore store, CancellationToken cancellationToken) =>
 {
     var findings = PiiScanner.Scan(request.Text);
     var findingsByType = findings
         .GroupBy(f => f.Type)
         .ToDictionary(g => g.Key, g => g.Count());
+
+    await store.RecordAsync(
+        ExternalScanKind.Pii, request.Source, findings.Count > 0,
+        new { findingsByType = findingsByType.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value) },
+        cancellationToken);
 
     return Results.Ok(new ScanResponse(findings.Count > 0, findings, findingsByType));
 })
@@ -91,9 +98,20 @@ app.MapPost("/scan", (ScanRequest request) =>
 .WithOpenApi();
 
 // Garde-fou format découplé : valide qu'une sortie (de n'importe quel agent) respecte un schéma JSON attendu.
-app.MapPost("/validate", (ValidateRequest request) =>
+app.MapPost("/validate", async (ValidateRequest request, ExternalScanStore store, CancellationToken cancellationToken) =>
 {
     var result = SchemaValidator.Validate(request.Output, request.Schema);
+
+    await store.RecordAsync(
+        ExternalScanKind.SchemaValidation, request.Source, !result.IsValid,
+        new
+        {
+            isValid = result.IsValid,
+            parseError = result.ParseError,
+            violationPaths = result.Violations.Select(v => v.Path).Distinct().ToList(),
+        },
+        cancellationToken);
+
     return Results.Ok(result);
 })
 .WithName("ValidateOutput")
@@ -101,12 +119,35 @@ app.MapPost("/validate", (ValidateRequest request) =>
 
 // Garde-fou injection découplé — s'applique à une ENTRÉE (prompt utilisateur, résultat d'outil,
 // document récupéré), contrairement à /scan et /validate qui portent sur une sortie.
-app.MapPost("/detect-injection", (DetectInjectionRequest request) =>
+app.MapPost("/detect-injection", async (DetectInjectionRequest request, ExternalScanStore store, CancellationToken cancellationToken) =>
 {
     var result = InjectionDetector.Scan(request.Input);
+
+    // Persistance sans les extraits : ils citent l'entrée scannée, donc la donnée du client.
+    await store.RecordAsync(
+        ExternalScanKind.InjectionDetection, request.Source, result.RiskLevel != InjectionRiskLevel.None,
+        new
+        {
+            riskLevel = result.RiskLevel.ToString(),
+            score = result.Score,
+            signalKinds = result.Signals
+                .GroupBy(s => s.Kind)
+                .ToDictionary(g => g.Key.ToString(), g => g.Count()),
+        },
+        cancellationToken);
+
     return Results.Ok(result);
 })
 .WithName("DetectInjection")
+.WithOpenApi();
+
+// Historique des scans externes — ce que les systèmes tiers ont fait vérifier.
+app.MapGet("/external-scans", async (int? limit, ExternalScanStore store, CancellationToken cancellationToken) =>
+{
+    var scans = await store.ListAsync(limit ?? 100, cancellationToken);
+    return Results.Ok(scans);
+})
+.WithName("ListExternalScans")
 .WithOpenApi();
 
 // Evals (T3) : rejeu du jeu d'évals + score + comparaison au run précédent.
@@ -257,8 +298,8 @@ app.MapGet("/evals/runs/{evalRunId:guid}", async (Guid evalRunId, EvalStore stor
 app.Run();
 
 record AgentRunRequest(string Prompt);
-record ScanRequest(string Text);
+record ScanRequest(string Text, string? Source = null);
 record ScanResponse(bool HasPiiViolation, List<PiiFinding> Findings, IReadOnlyDictionary<PiiType, int> FindingsByType);
-record ValidateRequest(string Output, JsonElement Schema);
-record DetectInjectionRequest(string Input);
+record ValidateRequest(string Output, JsonElement Schema, string? Source = null);
+record DetectInjectionRequest(string Input, string? Source = null);
 record PolicyEvaluateRequest(string AgentId, string Tool, Dictionary<string, object?>? Arguments = null);
