@@ -13,7 +13,8 @@ public record AgentRunSummary(
     int TotalOutputTokens,
     long TotalDurationMs,
     decimal EstimatedCostEur,
-    bool HasPiiViolation);
+    bool HasPiiViolation,
+    InjectionRiskLevel InjectionRisk);
 
 public class TraceQueryService(TraceDbContext dbContext)
 {
@@ -30,7 +31,8 @@ public class TraceQueryService(TraceDbContext dbContext)
                 r.TotalOutputTokens,
                 r.TotalDurationMs,
                 r.EstimatedCostEur,
-                r.HasPiiViolation))
+                r.HasPiiViolation,
+                r.InjectionRisk))
             .ToListAsync(cancellationToken);
     }
 
@@ -50,6 +52,11 @@ public class TraceQueryService(TraceDbContext dbContext)
             : JsonSerializer.Deserialize<Dictionary<string, int>>(entity.PiiSummaryJson)!
                 .ToDictionary(kv => Enum.Parse<PiiType>(kv.Key), kv => kv.Value);
 
+        var injectionSignalsByKind = entity.InjectionSummaryJson is null
+            ? new Dictionary<InjectionSignalKind, int>()
+            : JsonSerializer.Deserialize<Dictionary<string, int>>(entity.InjectionSummaryJson)!
+                .ToDictionary(kv => Enum.Parse<InjectionSignalKind>(kv.Key), kv => kv.Value);
+
         return new AgentRunTrace(
             entity.Id,
             entity.Prompt,
@@ -65,6 +72,9 @@ public class TraceQueryService(TraceDbContext dbContext)
             entity.TotalDurationMs,
             entity.EstimatedCostEur,
             entity.HasPiiViolation,
-            piiFindingsByType);
+            piiFindingsByType,
+            Budget: null,
+            InjectionRisk: entity.InjectionRisk,
+            InjectionSignalsByKind: injectionSignalsByKind);
     }
 }

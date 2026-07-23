@@ -31,4 +31,8 @@ public record AgentRunTrace(
     decimal EstimatedCostEur,
     bool HasPiiViolation,
     IReadOnlyDictionary<PiiType, int> PiiFindingsByType,
-    BudgetStatus? Budget = null);
+    BudgetStatus? Budget = null,
+    // Injection : signal heuristique agrégé sur le prompt ET les résultats d'outils.
+    // Flag, jamais blocage — un faux positif ne doit pas interrompre un run légitime.
+    InjectionRiskLevel InjectionRisk = InjectionRiskLevel.None,
+    IReadOnlyDictionary<InjectionSignalKind, int>? InjectionSignalsByKind = null);

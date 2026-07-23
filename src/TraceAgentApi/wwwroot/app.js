@@ -85,8 +85,10 @@ function renderRunList(runs) {
     const item = document.createElement("div");
     item.className = "run-item" + (run.runId === activeRunId ? " active" : "") + (run.hasPiiViolation ? " pii-violation" : "");
     const piiBadge = run.hasPiiViolation ? '<span class="pii-badge">⚠ PII</span>' : "";
+    const injBadge = run.injectionRisk && run.injectionRisk !== "None"
+      ? `<span class="injection-badge">⚠ INJ ${escapeHtml(run.injectionRisk)}</span>` : "";
     item.innerHTML = `
-      <div class="prompt">${escapeHtml(run.prompt)} ${piiBadge}</div>
+      <div class="prompt">${escapeHtml(run.prompt)} ${piiBadge} ${injBadge}</div>
       <div class="meta">${formatDate(run.startedAt)} · ${run.totalDurationMs} ms · ${run.totalInputTokens + run.totalOutputTokens} tokens</div>
     `;
     item.addEventListener("click", () => selectRun(run.runId));
@@ -129,6 +131,15 @@ function renderDetail(trace) {
       </div>`
     : "";
 
+  const injectionBanner = trace.injectionRisk && trace.injectionRisk !== "None"
+    ? `<div class="injection-banner">
+        <div class="label">⚠ Suspicion d'injection — risque ${escapeHtml(trace.injectionRisk)} (signal heuristique, à vérifier par un opérateur)</div>
+        ${Object.entries(trace.injectionSignalsByKind ?? {})
+          .map(([kind, count]) => `<span class="injection-chip">${escapeHtml(kind)} × ${count}</span>`)
+          .join(" ")}
+      </div>`
+    : "";
+
   detail.innerHTML = `
     <div class="stat-row">
       <div class="stat"><div class="label">Durée totale</div><div class="value">${trace.totalDurationMs} ms</div></div>
@@ -137,6 +148,7 @@ function renderDetail(trace) {
       <div class="stat"><div class="label">Coût estimé</div><div class="value">${trace.estimatedCostEur.toFixed(4)} €</div></div>
     </div>
     ${piiBanner}
+    ${injectionBanner}
     <div class="timeline">${stepsHtml}</div>
     <div class="final-answer">
       <div class="label">Réponse finale</div>

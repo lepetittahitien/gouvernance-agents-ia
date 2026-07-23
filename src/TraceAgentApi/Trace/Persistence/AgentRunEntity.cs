@@ -18,5 +18,11 @@ public class AgentRunEntity
     // — jamais la valeur détectée, pour ne pas transformer la base d'audit en dépôt de PII.
     public string? PiiSummaryJson { get; set; }
 
+    /// Niveau de risque d'injection agrégé (prompt + résultats d'outils). Persisté en entier.
+    public InjectionRiskLevel InjectionRisk { get; set; }
+
+    // Familles de signaux + comptes (ex: {"InstructionOverride":1}) — pas les extraits.
+    public string? InjectionSummaryJson { get; set; }
+
     public List<TraceStepEntity> Steps { get; set; } = [];
 }

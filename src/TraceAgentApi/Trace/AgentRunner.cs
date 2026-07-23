@@ -52,6 +52,11 @@ public class AgentRunner
             resourceType: "AgentRun", resourceId: runId.ToString(),
             details: $"prompt: {prompt}", cancellationToken: cancellationToken);
 
+        // Garde-fou injection (heuristique) : on scanne le prompt (injection directe) puis, dans
+        // la boucle, chaque résultat d'outil (injection indirecte). Flag, jamais blocage —
+        // un faux positif ne doit pas interrompre un run légitime.
+        var injectionResults = new List<InjectionScanResult> { InjectionDetector.Scan(prompt) };
+
         // 1. Démarrage du serveur MCP météo comme sous-processus (transport stdio).
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
@@ -160,6 +165,10 @@ public class AgentRunner
 
                 toolStopwatch.Stop();
 
+                // Injection indirecte : un résultat d'outil (document, réponse d'API) peut
+                // contenir une charge destinée au modèle qui va le lire juste après.
+                injectionResults.Add(InjectionDetector.Scan(result?.ToString() ?? ""));
+
                 steps.Add(new TraceStep(
                     Index: steps.Count + 1,
                     Kind: TraceStepKind.ToolCall,
@@ -207,6 +216,27 @@ public class AgentRunner
                 details: $"PII détectée — {breakdown}", cancellationToken: cancellationToken);
         }
 
+        // Agrégation des scans d'injection : le pire niveau l'emporte, les signaux se cumulent.
+        var injectionRisk = injectionResults.Max(r => r.RiskLevel);
+        var injectionSignalsByKind = injectionResults
+            .SelectMany(r => r.Signals)
+            .GroupBy(s => s.Kind)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        if (injectionRisk != InjectionRiskLevel.None)
+        {
+            var breakdown = string.Join(", ", injectionSignalsByKind.Select(kv => $"{kv.Key}={kv.Value}"));
+            _logger.LogWarning(
+                "Run {RunId} : suspicion d'injection ({Risk}) — {Breakdown}",
+                runId, injectionRisk, breakdown);
+
+            await _auditLogger.AppendAsync(
+                AuditActorType.System, "InjectionDetector", AuditAction.GuardrailViolation,
+                resourceType: "AgentRun", resourceId: runId.ToString(),
+                details: $"Suspicion d'injection ({injectionRisk}) — {breakdown}",
+                cancellationToken: cancellationToken);
+        }
+
         var trace = new AgentRunTrace(
             RunId: runId,
             Prompt: prompt,
@@ -221,7 +251,9 @@ public class AgentRunner
             // mais existe déjà pour brancher un vrai barème (Anthropic, OpenAI...) plus tard.
             EstimatedCostEur: 0m,
             HasPiiViolation: piiFindings.Count > 0,
-            PiiFindingsByType: piiFindingsByType);
+            PiiFindingsByType: piiFindingsByType,
+            InjectionRisk: injectionRisk,
+            InjectionSignalsByKind: injectionSignalsByKind);
 
         await PersistAsync(trace, cancellationToken);
 
@@ -264,6 +296,10 @@ public class AgentRunner
             HasPiiViolation = trace.HasPiiViolation,
             PiiSummaryJson = trace.PiiFindingsByType.Count > 0
                 ? JsonSerializer.Serialize(trace.PiiFindingsByType.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value))
+                : null,
+            InjectionRisk = trace.InjectionRisk,
+            InjectionSummaryJson = trace.InjectionSignalsByKind is { Count: > 0 }
+                ? JsonSerializer.Serialize(trace.InjectionSignalsByKind.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value))
                 : null,
             Steps = trace.Steps.Select(s => new TraceStepEntity
             {

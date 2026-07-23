@@ -41,6 +41,13 @@ public static class TraceWriter
             Console.WriteLine($"⚠️  VIOLATION PII : {breakdown}");
         }
 
+        if (trace.InjectionRisk != InjectionRiskLevel.None)
+        {
+            var breakdown = string.Join(", ", (trace.InjectionSignalsByKind ?? new Dictionary<InjectionSignalKind, int>())
+                .Select(kv => $"{kv.Key}={kv.Value}"));
+            Console.WriteLine($"⚠️  SUSPICION D'INJECTION ({trace.InjectionRisk}) : {breakdown}");
+        }
+
         if (trace.Budget is { } budget)
         {
             if (budget.PeriodTokenBudget > 0)
