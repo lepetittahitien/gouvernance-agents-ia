@@ -38,6 +38,8 @@ dotnet run
 
 Puis ouvrir `http://localhost:5013` — lancer un run depuis le formulaire, cliquer dessus pour voir la timeline.
 
+Pour une **démo guidée** (données réalistes + déroulé minuté + moment de falsification du journal en live) : `./demo/seed-demo.sh --with-evals` puis suivre [demo/DEMO.md](demo/DEMO.md).
+
 ```bash
 # Un run via l'API
 curl -X POST http://localhost:5013/agent/run \
