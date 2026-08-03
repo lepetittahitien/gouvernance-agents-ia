@@ -7,6 +7,7 @@ using OllamaSharp;
 using TraceAgentApi.Audit;
 using TraceAgentApi.Compliance;
 using TraceAgentApi.Evals;
+using TraceAgentApi.Overview;
 using TraceAgentApi.Policies;
 using TraceAgentApi.Search;
 using TraceAgentApi.Trace;
@@ -30,6 +31,7 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =
 builder.Services.AddDbContext<TraceDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("TraceDb"), o => o.UseVector()));
 builder.Services.AddScoped<CostEstimator>();
+builder.Services.AddScoped<OverviewService>();
 builder.Services.AddScoped<AgentRunner>();
 builder.Services.AddScoped<TraceQueryService>();
 builder.Services.AddScoped<EvalStore>();
@@ -140,6 +142,15 @@ app.MapPost("/detect-injection", async (DetectInjectionRequest request, External
     return Results.Ok(result);
 })
 .WithName("DetectInjection")
+.WithOpenApi();
+
+// Vue d'ensemble « santé des agents » — l'écran d'atterrissage, tout agrégé.
+app.MapGet("/overview", async (int? hours, OverviewService overview, CancellationToken cancellationToken) =>
+{
+    var stats = await overview.BuildAsync(hours ?? 24, cancellationToken);
+    return Results.Ok(stats);
+})
+.WithName("Overview")
 .WithOpenApi();
 
 // Historique des scans externes — ce que les systèmes tiers ont fait vérifier.

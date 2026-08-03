@@ -171,6 +171,25 @@
   .stat .value.bad { color: var(--danger); }
   .stat .stat-sub { font-size: 0.72rem; color: var(--accent-2); margin-top: 0.2rem; }
 
+  .overview-section-title { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 1.5rem 0 0.6rem; }
+  .overview-section-title:first-child { margin-top: 0.5rem; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.9rem; }
+  .tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .tile .tile-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .tile .tile-value { font-size: 1.7rem; font-weight: 700; margin-top: 0.25rem; }
+  .tile .tile-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+  .tile.good { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+  .tile.good .tile-value { color: var(--ok); }
+  .tile.warn { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); }
+  .tile.warn .tile-value { color: var(--accent-2); }
+  .tile.bad { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+  .tile.bad .tile-value { color: var(--danger); }
+
   .timeline { display: flex; flex-direction: column; gap: 0.6rem; }
   .step {
     background: var(--panel);
@@ -291,14 +310,25 @@
 </header>
 
 <nav class="tabs">
-  <button data-tab="runs" class="active">Runs</button>
+  <button data-tab="overview" class="active">Aperçu</button>
+  <button data-tab="runs">Runs</button>
   <button data-tab="evals">Évals</button>
   <button data-tab="audit">Audit</button>
   <button data-tab="search">Recherche</button>
   <button data-tab="external">Scans externes</button>
 </nav>
 
-<section id="tab-runs" class="tab-panel active">
+<section id="tab-overview" class="tab-panel active">
+  <div class="single">
+    <div class="toolbar">
+      <span class="hint">Santé des agents sur les dernières 24 h — l'écran d'un décideur qui n'a que dix secondes.</span>
+      <button id="refresh-overview-button" class="secondary">Rafraîchir</button>
+    </div>
+    <div id="overview-content"><p class="empty">Chargement…</p></div>
+  </div>
+</section>
+
+<section id="tab-runs" class="tab-panel">
   <div class="layout">
     <aside>
       <form id="run-form" class="stacked">

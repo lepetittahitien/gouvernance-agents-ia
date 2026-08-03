@@ -19,7 +19,8 @@ async function fetchJson(url, options) {
 // ===== Onglets =====
 
 const tabButtons = document.querySelectorAll("nav.tabs button");
-const loadedTabs = new Set(["runs"]);
+// overview (onglet par défaut) et runs sont chargés au démarrage, pas au clic.
+const loadedTabs = new Set(["overview", "runs"]);
 
 tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -33,6 +34,7 @@ tabButtons.forEach((btn) => {
       if (btn.dataset.tab === "evals") refreshEvals();
       if (btn.dataset.tab === "audit") refreshAudit();
       if (btn.dataset.tab === "external") refreshExternalScans();
+      if (btn.dataset.tab === "overview") refreshOverview();
     }
   });
 });
@@ -62,6 +64,70 @@ async function refreshBudget() {
     budgetWidget.innerHTML = `<div class="budget-line">Budget indisponible</div>`;
   }
 }
+
+// ===== Onglet Aperçu =====
+
+const overviewContent = document.getElementById("overview-content");
+const refreshOverviewButton = document.getElementById("refresh-overview-button");
+
+function tile(label, value, sub, cls) {
+  return `<div class="tile ${cls ?? ""}">
+    <div class="tile-label">${escapeHtml(label)}</div>
+    <div class="tile-value">${value}</div>
+    ${sub ? `<div class="tile-sub">${sub}</div>` : ""}
+  </div>`;
+}
+
+function renderOverview(o) {
+  // Le taux de violation colore la tuile : vert si zéro, orange sinon.
+  const piiCls = o.piiViolations === 0 ? "good" : "bad";
+  const injCls = o.injectionSuspicions === 0 ? "good" : "warn";
+  const denialCls = o.toolDenials === 0 ? "good" : "warn";
+  const auditCls = o.auditChainIntact ? "good" : "bad";
+  const budgetCls = o.budget.hasBreach ? "bad" : o.budget.periodUsagePercent >= 75 ? "warn" : "good";
+  const evalCls = o.latestEvalScore == null ? "" : o.latestEvalScore === 100 ? "good" : "warn";
+
+  overviewContent.innerHTML = `
+    <div class="overview-section-title">Activité (${o.periodHours} h)</div>
+    <div class="tiles">
+      ${tile("Runs", o.runsInPeriod)}
+      ${tile("Tokens", o.totalTokens.toLocaleString("fr-FR"))}
+      ${tile("Coût projeté", `${o.projectedCostEur.toFixed(4)} €`,
+        o.projectedCostModel ? `sur ${escapeHtml(o.projectedCostModel)}` : "", "warn")}
+    </div>
+
+    <div class="overview-section-title">Gouvernance</div>
+    <div class="tiles">
+      ${tile("Fuites PII", o.piiViolations, `${o.piiViolationRate} % des runs`, piiCls)}
+      ${tile("Suspicions d'injection", o.injectionSuspicions, `${o.injectionSuspicionRate} % des runs`, injCls)}
+      ${tile("Appels d'outils bloqués", o.toolDenials, "par les policies", denialCls)}
+    </div>
+
+    <div class="overview-section-title">Santé de la plateforme</div>
+    <div class="tiles">
+      ${tile("Journal d'audit", o.auditChainIntact ? "Intègre" : "Compromis",
+        `${o.auditEntriesChecked} entrées vérifiées`, auditCls)}
+      ${tile("Budget tokens", `${o.budget.periodUsagePercent} %`,
+        `${o.budget.periodTokensUsed.toLocaleString("fr-FR")} / ${o.budget.periodTokenBudget.toLocaleString("fr-FR")}`, budgetCls)}
+      ${tile("Scans externes", o.externalScansInPeriod,
+        `${o.externalScanViolations} violation(s)`, o.externalScanViolations === 0 ? "good" : "warn")}
+      ${o.latestEvalScore != null
+        ? tile("Dernier score d'évals", `${o.latestEvalScore} %`, "", evalCls)
+        : tile("Dernier score d'évals", "—", "aucun run d'évals")}
+    </div>
+  `;
+}
+
+async function refreshOverview() {
+  overviewContent.innerHTML = '<p class="empty">Chargement…</p>';
+  try {
+    renderOverview(await fetchJson("/overview"));
+  } catch (err) {
+    overviewContent.innerHTML = `<p class="empty">Impossible de charger l'aperçu : ${escapeHtml(String(err))}</p>`;
+  }
+}
+
+refreshOverviewButton.addEventListener("click", refreshOverview);
 
 // ===== Onglet Runs (logique d'origine) =====
 
@@ -508,5 +574,6 @@ refreshExternalButton.addEventListener("click", refreshExternalScans);
 
 // ===== Démarrage =====
 
+refreshOverview(); // onglet par défaut
 refreshRunList();
 refreshBudget();
