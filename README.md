@@ -1,5 +1,7 @@
 # Gouvernance & Observabilité d'agents IA
 
+[![CI](https://github.com/lepetittahitien/gouvernance-agents-ia/actions/workflows/ci.yml/badge.svg)](https://github.com/lepetittahitien/gouvernance-agents-ia/actions/workflows/ci.yml)
+
 > Le tableau de bord qui montre **ce que font les agents IA en prod**, **ce qu'ils coûtent**, et qui les **empêche de déraper**.
 
 Un agent IA en production est, par défaut, une boîte noire : personne ne sait ce qu'il fait étape par étape, ni ce que chaque décision coûte, ni s'il vient de fuiter une donnée client. Ce projet construit la couche de contrôle qui manque — avec un parti pris : **la sortie d'un agent est probabiliste, ses garde-fous doivent être du code déterministe.**
@@ -73,7 +75,7 @@ curl -X POST localhost:5013/detect-injection -H "Content-Type: application/json"
 dotnet test
 ```
 
-41 tests unitaires sur les composants déterministes — détection PII (dont rejet Luhn des faux positifs), validation de schéma, détection d'injection (attaques *et* entrées légitimes), et chaîne de hachage d'audit (falsification, suppression, réordonnancement, pièges de précision de timestamps).
+59 tests unitaires sur les composants déterministes, exécutés en CI à chaque push — détection PII (dont rejet Luhn des faux positifs), validation de schéma, détection d'injection (attaques *et* entrées légitimes), chaîne de hachage d'audit (falsification, suppression, réordonnancement, pièges de précision de timestamps), contrôle d'accès (fermé par défaut, refus prioritaire, contraintes d'arguments) et échappement CSV de l'export de conformité (RFC 4180). Aucun ne nécessite Postgres ni Ollama.
 
 ## Choix assumés et limites connues
 

@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # Les tests unitaires portent sur les composants déterministes (PII, schéma,
+      # injection, chaîne d'audit, policies, export CSV) — aucun ne nécessite Postgres
+      # ni Ollama, donc le job reste rapide et sans service externe.
+      - name: Restaurer
+        run: dotnet restore src/TraceAgentApi.Tests/TraceAgentApi.Tests.csproj
+
+      - name: Compiler
+        run: dotnet build src/TraceAgentApi.Tests/TraceAgentApi.Tests.csproj --no-restore --configuration Release
+
+      - name: Tester
+        run: dotnet test src/TraceAgentApi.Tests/TraceAgentApi.Tests.csproj --no-build --configuration Release --verbosity normal

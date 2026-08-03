@@ -31,9 +31,13 @@ public class ToolPolicyEvaluator(IConfiguration configuration, ILogger<ToolPolic
             ?? new ToolPolicyConfig([], DefaultDeny: true);
     }
 
-    public PolicyEvaluation Evaluate(string agentId, string tool, IDictionary<string, object?>? arguments = null)
+    public PolicyEvaluation Evaluate(string agentId, string tool, IDictionary<string, object?>? arguments = null) =>
+        Evaluate(LoadConfig(), agentId, tool, arguments);
+
+    /// Logique de décision pure — la config est fournie, aucune I/O. Testable sans fichier ni DI.
+    public static PolicyEvaluation Evaluate(
+        ToolPolicyConfig config, string agentId, string tool, IDictionary<string, object?>? arguments = null)
     {
-        var config = LoadConfig();
         var policy = config.Agents.FirstOrDefault(a =>
             string.Equals(a.AgentId, agentId, StringComparison.OrdinalIgnoreCase));
 
