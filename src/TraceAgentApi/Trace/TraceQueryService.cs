@@ -16,7 +16,7 @@ public record AgentRunSummary(
     bool HasPiiViolation,
     InjectionRiskLevel InjectionRisk);
 
-public class TraceQueryService(TraceDbContext dbContext)
+public class TraceQueryService(TraceDbContext dbContext, CostEstimator costEstimator)
 {
     public async Task<List<AgentRunSummary>> ListRunsAsync(CancellationToken cancellationToken = default)
     {
@@ -57,6 +57,10 @@ public class TraceQueryService(TraceDbContext dbContext)
             : JsonSerializer.Deserialize<Dictionary<string, int>>(entity.InjectionSummaryJson)!
                 .ToDictionary(kv => Enum.Parse<InjectionSignalKind>(kv.Key), kv => kv.Value);
 
+        // La projection se recalcule à la relecture depuis les tokens stockés — non persistée,
+        // donc elle reflète toujours le barème courant.
+        var cost = costEstimator.Estimate(entity.ModelName, entity.TotalInputTokens, entity.TotalOutputTokens);
+
         return new AgentRunTrace(
             entity.Id,
             entity.Prompt,
@@ -75,6 +79,8 @@ public class TraceQueryService(TraceDbContext dbContext)
             piiFindingsByType,
             Budget: null,
             InjectionRisk: entity.InjectionRisk,
-            InjectionSignalsByKind: injectionSignalsByKind);
+            InjectionSignalsByKind: injectionSignalsByKind,
+            ProjectedCostEur: cost.ProjectedEur,
+            ProjectedCostModel: cost.ProjectedModel);
     }
 }

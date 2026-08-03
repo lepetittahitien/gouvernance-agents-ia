@@ -29,6 +29,7 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =
     new OllamaApiClient(new Uri(ollamaUri), ollamaEmbeddingModel));
 builder.Services.AddDbContext<TraceDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("TraceDb"), o => o.UseVector()));
+builder.Services.AddScoped<CostEstimator>();
 builder.Services.AddScoped<AgentRunner>();
 builder.Services.AddScoped<TraceQueryService>();
 builder.Services.AddScoped<EvalStore>();

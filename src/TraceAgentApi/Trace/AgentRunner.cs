@@ -18,6 +18,7 @@ public class AgentRunner
     private readonly BudgetMonitor _budgetMonitor;
     private readonly AuditLogger _auditLogger;
     private readonly ToolPolicyEvaluator _policyEvaluator;
+    private readonly CostEstimator _costEstimator;
     private readonly ILogger<AgentRunner> _logger;
     private readonly string _weatherServerProjectPath;
 
@@ -27,6 +28,7 @@ public class AgentRunner
         BudgetMonitor budgetMonitor,
         AuditLogger auditLogger,
         ToolPolicyEvaluator policyEvaluator,
+        CostEstimator costEstimator,
         ILogger<AgentRunner> logger,
         IConfiguration configuration)
     {
@@ -35,6 +37,7 @@ public class AgentRunner
         _budgetMonitor = budgetMonitor;
         _auditLogger = auditLogger;
         _policyEvaluator = policyEvaluator;
+        _costEstimator = costEstimator;
         _logger = logger;
         _weatherServerProjectPath = configuration["McpWeatherServer:ProjectPath"]
             ?? throw new InvalidOperationException("Configuration manquante: McpWeatherServer:ProjectPath");
@@ -237,6 +240,9 @@ public class AgentRunner
                 cancellationToken: cancellationToken);
         }
 
+        // Coût réel (0 en local) + projection sur un modèle payant de référence.
+        var cost = _costEstimator.Estimate(ModelName, totalInputTokens, totalOutputTokens);
+
         var trace = new AgentRunTrace(
             RunId: runId,
             Prompt: prompt,
@@ -247,13 +253,13 @@ public class AgentRunner
             TotalInputTokens: totalInputTokens,
             TotalOutputTokens: totalOutputTokens,
             TotalDurationMs: totalStopwatch.ElapsedMilliseconds,
-            // Ollama tourne en local : pas de facturation réelle. Le champ reste à 0€
-            // mais existe déjà pour brancher un vrai barème (Anthropic, OpenAI...) plus tard.
-            EstimatedCostEur: 0m,
+            EstimatedCostEur: cost.ActualEur,
             HasPiiViolation: piiFindings.Count > 0,
             PiiFindingsByType: piiFindingsByType,
             InjectionRisk: injectionRisk,
-            InjectionSignalsByKind: injectionSignalsByKind);
+            InjectionSignalsByKind: injectionSignalsByKind,
+            ProjectedCostEur: cost.ProjectedEur,
+            ProjectedCostModel: cost.ProjectedModel);
 
         await PersistAsync(trace, cancellationToken);
 

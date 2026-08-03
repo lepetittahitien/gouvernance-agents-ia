@@ -145,7 +145,13 @@ function renderDetail(trace) {
       <div class="stat"><div class="label">Durée totale</div><div class="value">${trace.totalDurationMs} ms</div></div>
       <div class="stat"><div class="label">Tokens in</div><div class="value">${trace.totalInputTokens}</div></div>
       <div class="stat"><div class="label">Tokens out</div><div class="value">${trace.totalOutputTokens}</div></div>
-      <div class="stat"><div class="label">Coût estimé</div><div class="value">${trace.estimatedCostEur.toFixed(4)} €</div></div>
+      <div class="stat">
+        <div class="label">Coût estimé</div>
+        <div class="value">${trace.estimatedCostEur.toFixed(4)} €</div>
+        ${trace.projectedCostEur != null && trace.projectedCostModel
+          ? `<div class="stat-sub">≈ ${trace.projectedCostEur.toFixed(4)} € sur ${escapeHtml(trace.projectedCostModel)}</div>`
+          : ""}
+      </div>
     </div>
     ${piiBanner}
     ${injectionBanner}

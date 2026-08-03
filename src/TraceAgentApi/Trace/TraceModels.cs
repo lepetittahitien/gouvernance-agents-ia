@@ -35,4 +35,8 @@ public record AgentRunTrace(
     // Injection : signal heuristique agrégé sur le prompt ET les résultats d'outils.
     // Flag, jamais blocage — un faux positif ne doit pas interrompre un run légitime.
     InjectionRiskLevel InjectionRisk = InjectionRiskLevel.None,
-    IReadOnlyDictionary<InjectionSignalKind, int>? InjectionSignalsByKind = null);
+    IReadOnlyDictionary<InjectionSignalKind, int>? InjectionSignalsByKind = null,
+    // Projection « combien ce run coûterait sur un provider payant » — calculée à partir des
+    // tokens (déjà persistés) × barème de référence, donc pas besoin de la stocker.
+    decimal? ProjectedCostEur = null,
+    string? ProjectedCostModel = null);

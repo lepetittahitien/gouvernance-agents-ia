@@ -34,6 +34,10 @@ public static class TraceWriter
         Console.WriteLine($"Durée totale   : {trace.TotalDurationMs} ms");
         Console.WriteLine($"Coût estimé    : {trace.EstimatedCostEur:0.0000} €" +
                            (trace.EstimatedCostEur == 0 ? "  (modèle local Ollama — pas de facturation réelle)" : ""));
+        if (trace.ProjectedCostEur is { } projected && trace.ProjectedCostModel is { } projectedModel)
+        {
+            Console.WriteLine($"Projeté        : ≈ {projected:0.0000} € sur {projectedModel} (pour ces mêmes tokens)");
+        }
 
         if (trace.HasPiiViolation)
         {
